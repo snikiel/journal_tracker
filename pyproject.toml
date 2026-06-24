@@ -1,0 +1,11 @@
+[project]
+name = "journal-tracker"
+version = "0.1.0"
+description = "A tool for analyzing and formatting journal citations"
+readme = "README.md"
+requires-python = ">=3.14"
+dependencies = [
+    "argparse>=1.4.0",
+    "pandas>=3.0.3",
+    "pytest>=9.1.1",
+]
