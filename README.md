@@ -1,6 +1,10 @@
 # journal_tracker
 A tool for analyzing and formatting journal citations
 
+## Getting Started
+To run this script, you must:
+1. 
+
 ## Specifications
 ### Overview
 Citations from various journals need to be cut apart so that various parts of them can be sorted, filtered, and analyzed.

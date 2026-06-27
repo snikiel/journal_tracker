@@ -216,3 +216,5 @@ __marimo__/
 
 # Streamlit
 .streamlit/secrets.toml
+data/parsed_full.xlsx
+data/.~lock.parsed_full.xlsx#
