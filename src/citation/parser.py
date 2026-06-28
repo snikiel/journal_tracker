@@ -5,7 +5,7 @@ into a new Excel file with structured fields.
 import argparse
 import logging
 import os
-import pprint
+from pprint import pformat
 import re
 import sys
 from termcolor import colored
@@ -75,7 +75,6 @@ class CitationParser():
         """
         Main function to read the input Excel file, parse citations, and write to output Excel file.
         """
-        print("Hello from journal-tracker!")
 
         # Read source file
         xl = pd.ExcelFile(self.input_file)
@@ -116,26 +115,24 @@ class CitationParser():
                         authors = parts[0].strip().rstrip('.')
                         rest = parts[1]
 
-                        # Match title, then everything after
-                        title_match = re.match(r'\.\s*(.*?)\.\s*(.*)', rest)
+                        # Remove DOI portion from the tail before parsing journal info
+                        if doi:
+                            rest = rest.split(doi)[0]
+
+                        rest = rest.replace(" [page numbers missing]", "")
+                        rest_parts = rest.split(',')
+                        if doi == 'https://doi.org/10.1007/s10940-016-9332-7':
+                            print(f'rest: {rest}, rest_parts: {rest_parts}')
+
+                        pages_match = re.search(r'(\d+[-–][\d\?]+)\.*\s*$', rest_parts[-1].strip())
+                        pages = rest_parts.pop(-1).strip().rstrip('.') if len(rest_parts) > 1 and pages_match else ''
+                        volissue_match = re.search(r'(XX|\d+(\([-–\d]+\))*)\s*$', rest_parts[-1].strip())
+                        volissue = rest_parts.pop(-1).strip() if len(rest_parts) > 1 and volissue_match else ''
+                        title_journal = ','.join(rest_parts).lstrip('.').strip() if len(rest_parts) > 0 else ''
+                        title_match = re.match(r'(.*[\.\?\!])([^\.\?\!]+)$', title_journal)
                         if title_match:
-                            title = title_match.group(1).strip()
-                            tail = title_match.group(2)
-
-                            # Remove DOI portion from the tail before parsing journal info
-                            if doi:
-                                tail = tail.split(doi)[0]
-
-                            # Try to capture Journal, Volume(Issue), Pages
-                            journal_match = re.match(
-                                r'(.*?),\s*(\d+\([^)]*\)),\s*([\d–-]+)',
-                                tail
-                            )
-
-                            if journal_match:
-                                journal = journal_match.group(1).strip()
-                                volissue = journal_match.group(2)
-                                pages = journal_match.group(3)
+                            title = title_match.group(1).strip().rstrip('.')
+                            journal = title_match.group(2).strip().rstrip('.')
 
                     else:
                         # No year present = author-only entry
@@ -161,8 +158,9 @@ class CitationParser():
                 df = pd.DataFrame(entries)
                 df.to_excel(writer, sheet_name=str(sheet_name), index=False, engine='openpyxl')
 
-                print(f'created sheet {sheet_name} with {self.output_warning_count(sheet_name)} parsing warnings')
-                exit()
+                warning_count = self.output_warning_count(sheet_name)
+                output_color = 'red' if warning_count > 0 else 'green'
+                print(colored(f'created sheet {sheet_name} with {warning_count} mis-parsed citations.', output_color))
 
     def validate_citation(self, citation, row_index, sheet_name):
         """
@@ -184,17 +182,19 @@ class CitationParser():
             self.log_parsing_warning("No DOI found", citation, row_index, sheet_name)
         if citation['Number of Authors'] != floor(citation['Number of Authors']):
             self.log_parsing_warning("Number of authors is not an integer", citation, row_index, sheet_name)
+        
+        if self.warning_count.get(sheet_name, {}).get(citation['Original Citation'], 0) > 0:
+            self.logger.info(
+                '   Info:    (sheet: "%s", row: %s) - Citation: %s', 
+                sheet_name, row_index, pformat(citation))
 
     def log_parsing_warning(self, message, citation, row_index, sheet_name):
         """
         Log a parsing warning with details about the citation and its location.
         """
         self.logger.warning(
-            'Warning: (sheet: "%s", row: %s) - %s in citation: %s', 
-            sheet_name, row_index, message, citation)
-        print(colored('Warning:', 'yellow') + 
-              f' (sheet: "{sheet_name}", row: {row_index}) - {message} in citation:')
-        pprint.pprint(citation)
+            'Warning: (sheet: "%s", row: %s) - %s in citation.', 
+            sheet_name, row_index, message)
         self.tally_parsing_warnings(citation, sheet_name)
 
     def tally_parsing_warnings(self, citation, sheet_name):
