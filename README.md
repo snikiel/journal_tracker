@@ -3,7 +3,12 @@ A tool for analyzing and formatting journal citations
 
 ## Getting Started
 To run this script, you must:
-1. 
+1. Clone this repository from github `git clone https://github.com/snikiel/journal_tracker.git`
+1. Copy your xlsx data file into the project's `/data/` folder.
+1. Run `uv run python main.py --input [the_name_of_your_data_file_from_step_2.xlsx]` from the project's root folder, this will prompt and/or handle the installation of a handfull of modules.
+1. You can also include the `--output` flag followed by whatever file name you would like your parsed data file to be saved as. This will be saved alongside the input file in the project's `/data/` folder.
+1. This will first automatically run the suite of test cases, and if they all pass, it will proceed to parse and validate the data and log any anomolies, producing a parsed file.
+1. Each time you run the script, a new log file will be created in the project's `/log/` folder, so you can review it after the fact.
 
 ## Specifications
 ### Overview

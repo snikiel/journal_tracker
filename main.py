@@ -23,7 +23,6 @@ def main():
         print("Tests failed — aborting.", file=sys.stderr)
         sys.exit(1)
 
-    print("Hello from journal-tracker!")
     parser = CitationParser()
     parser.run()
 

@@ -218,3 +218,4 @@ __marimo__/
 .streamlit/secrets.toml
 data/parsed_full.xlsx
 data/.~lock.parsed_full.xlsx#
+data/Journal Tracking - parsed.xlsx
