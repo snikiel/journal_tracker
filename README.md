@@ -1,4 +1,4 @@
-# journal_tracker
+# citation_parser
 A tool for analyzing and formatting journal citations
 
 ## Getting Started
