@@ -2,7 +2,13 @@
 A tool for analyzing and formatting journal citations
 
 ## Getting Started
-To run this script, you must:
+### Dependencies
+1. `git`
+1. `python`
+1. `uv`
+  1. `python3 -m ensurepip --upgrade`
+  1. `pip install uv --upgrade`
+### To run this script, you must:
 1. Clone this repository from github `git clone https://github.com/snikiel/journal_tracker.git`
 1. Copy your xlsx data file into the project's `/data/` folder.
 1. Run `uv run python main.py --input [the_name_of_your_data_file_from_step_2.xlsx]` from the project's root folder, this will prompt and/or handle the installation of a handfull of modules.
