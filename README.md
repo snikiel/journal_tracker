@@ -3,9 +3,9 @@ A tool for analyzing and formatting journal citations
 
 ## Getting Started
 ### Dependencies
-1. `git`
-1. `python`
-1. `uv`
+1. `git` - source control system for retrieving the source code to run it.
+1. `python` - executable to run the scripts which are in python.
+1. `uv` - the package and environment manager for python.
     1. `python3 -m ensurepip --upgrade`
     1. `pip install uv --upgrade`
 ### To run this script, you must:
