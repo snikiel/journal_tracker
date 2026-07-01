@@ -6,8 +6,8 @@ A tool for analyzing and formatting journal citations
 1. `git`
 1. `python`
 1. `uv`
-  1. `python3 -m ensurepip --upgrade`
-  1. `pip install uv --upgrade`
+    1. `python3 -m ensurepip --upgrade`
+    1. `pip install uv --upgrade`
 ### To run this script, you must:
 1. Clone this repository from github `git clone https://github.com/snikiel/journal_tracker.git`
 1. Copy your xlsx data file into the project's `/data/` folder.
