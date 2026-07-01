@@ -24,6 +24,7 @@ class Citation():
         self.author_num= author_num
         self.parse_errors = False
         self.logger = logger
+
     def __str__(self):
         return pformat(vars(self))
 
@@ -31,7 +32,10 @@ class Citation():
         """
         Convert the Citation object to a dictionary.
         """
-        return vars(self)
+        attrs = vars(self)
+        del attrs['logger']
+        del attrs['row']
+        return attrs
 
     def num_authors(self):
         """Takes a string of authors and returns the number of authors"""

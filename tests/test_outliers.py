@@ -3,31 +3,50 @@ Test specific citations to make sure that
 the parsing logic is working correctly.
 """
 import os
-
+import pandas as pd
 import pytest
 
 from src.citation.parser import CitationParser
 
-citations = [
-    "Gadd, D. (2015). In the aftermath of violence: What constitutes a responsive response? British Journal of Criminology, 55(6), 1031–1039. https://doi.org/10.1093/bjc/azv096",
-    "Crow, M. S., & Goulette, N. (2025). U.S. district court judicial diversity: The impact of race and sex composition on sentencing outcomes at the district level. Crime & Delinquency, 71(11), 3529–3553. https://doi.org/10.1177/00111287241231748",
-    "Boehme, H. M., Williams, T. V., Brown, N., Kidd, L., Hernandez, B., & Nolan, M. S. (2022). “It’s all about just creating the safe space”: Barbershops and beauty salons as community anchors in Black neighborhoods: Crime prevention, cohesion, and support during the COVID-19 pandemic. Crime & Delinquency, 1–25. https://doi.org/10.1177/00111287221130956",
-    "Levin, A., Rosenfeld, R., & Deckard, M. (2017). The law of crime concentration: An application and recommendations for future research. Journal of Quantitative Criminology, 33(3), 633–? [page numbers missing]. https://doi.org/10.1007/s10940-016-9332-7"
-]
-expected_failures = [
-    "Carson, J. V. (2019). Assessing the nuances of counterterrorism programs: A country-level investigation of",
-    "Felson, R. B., Osgood, D. W., Cundiff, P. R., & Wiernik"
-]
 
-tracker = CitationParser(os.path.join(os.path.dirname(__file__), '..'))
-assert tracker is not None, "Failed to create JournalTracker instance"
+parser = CitationParser(os.path.join(os.path.dirname(__file__), '..'))
+assert parser is not None, "Failed to create CitationParser instance"
 
-@pytest.mark.parametrize("citation", citations)
-def test_citation_parsing(citation):
+test_data_location = os.path.join(os.path.dirname(__file__),
+                                  'expected_output', 'expected_output.xlsx')
+test_df = pd.read_excel(test_data_location, dtype=str, sheet_name="test_cases")
+test_df = test_df.fillna("")
+test_df = test_df.to_dict(orient="records")
+
+@pytest.mark.parametrize("case", test_df, ids=[
+    c["original_citation"][:60] for c in test_df
+])
+def test_regression_citation(case):
     """
-    Test the parsing of a specific citation.
+    Test that the parsing of a citation matches the expected output.
     """
-    parsed = tracker.parse_line(citation, 0, "test_sheet")
-    print(f"Testing citation: {citation}, Parsed: {vars(parsed)}")
-    for key, value in vars(parsed).items():
-        assert value is not None, f"Failed to parse {key} from citation: {citation}"
+    original = case.pop("original_citation")
+    result = parser.parse_line(original, 0, "test_sheet")
+    parsed = result.to_dict()
+
+    failures = []
+    for field, expected in case.items():
+        if field in ["row", "sheet_name", "parse_errors"]:
+            continue  # Skip fields that are not relevant for comparison   
+        actual = normalize(field, parsed.get(field, ""))
+        expected = normalize(field, expected)
+        if actual != expected:
+            failures.append(f"  {field}: expected {expected!r}, got {actual!r}")
+
+    assert not failures, "Mismatch in fields:\n" + "\n".join(failures)
+
+def normalize(field, value):
+    """
+    Normalize a value for comparison, treating None and empty strings as equivalent.
+    """
+    # these fields are expected to be integers or floats, so we convert them accordingly
+    if field in ["year", "parse_errors"]:
+        return int(value) if value not in [None, ""] else None
+    if field in ["author_num"]:
+        return f'{float(value):.1f}' if value not in [None, ""] else 0
+    return str(value).strip() if value not in [None, ""] else ""

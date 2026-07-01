@@ -219,3 +219,5 @@ __marimo__/
 data/parsed_full.xlsx
 data/.~lock.parsed_full.xlsx#
 data/Journal Tracking - parsed.xlsx
+tests/expected_output/.~lock.expected_output.xlsx#
+data/.~lock.Journal Tracking - parsed.xlsx#

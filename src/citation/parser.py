@@ -91,45 +91,47 @@ class CitationParser():
         """
         Parse a single citation line into structured fields.
         """
+        citation = Citation(
+            original_citation=line, row=row, sheet_name=sheet_name, logger=self.logger)
+
         if not line or not isinstance(line, str):
             self.logger.warning(
                 'Empty or invalid citation line at row %s in sheet "%s".',
                 row, sheet_name)
-            return Citation(original_citation=line, row=row, sheet_name=sheet_name, logger=self.logger)
+            return citation
 
-        citation = Citation(original_citation=line, row=row, sheet_name=sheet_name, logger=self.logger)
         # Detect year in parentheses
-        year_match = re.search(r'\((\d{4})\)', citation.original_citation)
-        citation.year = year_match.group(1) if year_match else ''
+        year_match = re.search(r'(.*)\((\d{4})\)(.*)', citation.original_citation)
+        if year_match:
+            citation.authors = year_match.group(1).strip().rstrip('.')
+            citation.year = year_match.group(2) if year_match else ''
+            rest = year_match.group(3)
 
-        # Extract DOI or URL
-        doi_match = re.search(r'(https?://\S+)', citation.original_citation)
-        if doi_match:
-            citation.doi = doi_match.group(1)
+            # Extract DOI or URL
+            doi_match = re.search(r'(.*)(https?://\S+)', rest)
+            if doi_match:
+                rest = doi_match.group(1)
+                citation.doi = doi_match.group(2)
 
-        if citation.year:
-            # Split authors vs. rest of citation
-            parts = citation.original_citation.split(f'({citation.year})')
-            citation.authors = parts[0].strip().rstrip('.')
-            rest = parts[1]
-
-            # Remove DOI portion from the tail before parsing journal info
-            if citation.doi:
-                rest = rest.split(citation.doi)[0]
-
+            # Some entries include this text in addition to a question mark next to the page nums.
             rest = rest.replace(" [page numbers missing]", "")
             rest_parts = rest.split(',')
-            if citation.doi == 'https://doi.org/10.1007/s10940-016-9332-7':
-                print(f'rest: {rest}, rest_parts: {rest_parts}')
 
+            # Page listings can be 1 or more pages separated by a dash
+            # and are often followed by a period.
             pages_match = re.search(r'(\d+[-–][\d\?]+)\.*\s*$', rest_parts[-1].strip())
             citation.pages = rest_parts.pop(-1).strip().rstrip('.') if len(rest_parts) > 1 and pages_match else ''
 
+            # Volumes and issues are tethered in a Volume(Issue) format.
+            # Some entries include muleiple issues, and some missing volumes are entered as XX.
             volissue_match = re.search(r'(XX|\d+(\([-–\d]+\))*)\s*$', rest_parts[-1].strip())
             citation.volume_issue = rest_parts.pop(-1).strip() if len(rest_parts) > 1 and volissue_match else ''
 
+            # What's left at this point should be just the title and the journal.
+            # None of the journals have any punctuation in them, and each of the articles seem
+            # to end with one, so we're splitting on that.
             title_journal = ','.join(rest_parts).lstrip('.').strip() if len(rest_parts) > 0 else ''
-            title_match = re.match(r'(.*[\.\?\!])([^\.\?\!]+)$', title_journal)
+            title_match = re.match(r'(.*[”\.\?\!])([^”\.\?\!]+)$', title_journal)
             if title_match:
                 citation.title = title_match.group(1).strip().rstrip('.')
                 citation.journal = title_match.group(2).strip().rstrip('.')
@@ -140,7 +142,6 @@ class CitationParser():
             self.logger.warning(
                 'No year found in citation: "%s"(row#%s in sheet "%s")'
                 , citation.original_citation, row, sheet_name)
-
 
         citation.num_authors()
         return citation
@@ -164,7 +165,7 @@ class CitationParser():
         # without knowing/caring what they're called.
         with pd.ExcelWriter(self.output_file) as writer:
             for sheet_name in xl.sheet_names:
-                print(f'{sheet_name}')
+                self.logger.debug('Starting the parsing of sheet "%s"', sheet_name)
                 df = xl.parse(sheet_name=sheet_name)
 
                 entries = []
@@ -174,7 +175,8 @@ class CitationParser():
                         if sheet_name == 'british j of crim'
                         else row['Citation'])
 
-                    citation = self.parse_line(line, i, sheet_name)
+                    line_number = int(str(i)) + 2
+                    citation = self.parse_line(line, line_number, sheet_name)
                     citation.validate()
                     entries.append(citation.to_dict())
 
@@ -186,6 +188,10 @@ class CitationParser():
                     warning_count = 0
                     self.logger.warning('sheet "%s" has no entries', sheet_name)
                 else:
+                    journal_names = df['journal'].unique()
+                    if len(journal_names) > 1:
+                        self.logger.warning('sheet %s has multiple journal names: %s',
+                                            sheet_name, journal_names)
                     warning_count = (df['parse_errors']).sum()
                 output_message = f'created sheet "{sheet_name}" with {warning_count} mis-parsed citations.'
                 if warning_count > 0:
